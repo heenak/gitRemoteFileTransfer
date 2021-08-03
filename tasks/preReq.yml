@@ -1,0 +1,4 @@
+---
+- name: Check if git is installed if not install git
+  hosts: localhost
+  tasks:

@@ -1,0 +1,52 @@
+---
+- name: Transfer recently committed files to Remote Source
+  hosts: localhost
+  tasks:
+  - name: Check if dest already exists
+    stat:
+      path: /home/Jenkins
+    register: deststats
+
+  - name: Delete folder if it exists
+    file:
+      path: /home/Jenkins
+      state: absent
+    when: deststats.stat.exists
+
+  - name: Clone git repo
+    git:
+      repo: 'https://github.com/Nanidini/Jenkins'
+      dest: /home/Jenkins
+  
+  - name: Get number of Files in folder
+    shell: 'ls | wc -l'
+    args:
+       chdir: /home/Jenkins
+    register: file_count
+
+  - debug:
+      msg: "{{file_count.stdout| int}}"
+
+  - name: Get list of files    
+    shell: 'git ls-tree -r --name-only main -z | TZ=UTC xargs -0n1 -I_ git --no-pager log -1 --date=iso-local --format="%ad _" -- _ | sort'
+    args:
+      chdir: /home/Jenkins
+    register: clonefiles
+   
+  - debug:
+       var : clonefiles
+
+  - name: Filter files on basis of date
+    debug:
+       msg: "{{clonefiles.stdout_lines[item].split()[3]}}"
+    when: clonefiles.stdout_lines[item].find(ansible_date_time.date) != -1
+    loop: "{{ range (0,file_count.stdout| int )|list}}"
+
+  - name: Copy File to other destination
+    synchronize:
+      src: /home/Jenkins/{{clonefiles.stdout_lines[item].split()[3]}}
+      dest: /tmp/{{clonefiles.stdout_lines[item].split()[3]}}
+      delegate_to: 18.224.45.33
+    when: clonefiles.stdout_lines[item].find(ansible_date_time.date) != -1
+    loop: "{{ range (0,file_count.stdout| int )|list}}"
+

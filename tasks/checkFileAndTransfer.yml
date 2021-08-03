@@ -1,0 +1,24 @@
+---
+- name: Check file and Transfer
+  hosts: localhost
+
+  # vars:
+  #   filedetails: "{{ lookup('test'),'/home/Jenkins'}}"
+
+  tasks:
+  - name: Check to see if file exists
+    stat:
+      path: /home/Jenkins
+    register: stat_results 
+
+  - debug:
+      var: filedetails  
+
+  - name: Find files
+    find:
+       path: /home/Jenkins
+       recurse: Yes
+    register: fileNames
+
+  - debug: 
+      var: fileNames
